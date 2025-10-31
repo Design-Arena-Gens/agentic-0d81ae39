@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InvoiceCraft – Privacy-First Invoice Generator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-/QaFBL2cKI3iIDk6h2LHfiH0P0sxVG4gwVHSZBHwm2T2Xd2lKJ4hMo0aMOpSIoSURqj8yKcZ5hzMc7/7+K5f5g==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5zs2Enl82ZEl0BdVuWkSzuKQg1JjCyBzUeJ/jiALAg0Itj8uxsIpvV7lidh+NangNh4tW7x1z7rGfB3U9VA==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+</head>
+<body>
+  <noscript>Please enable JavaScript to use InvoiceCraft.</noscript>
+  <div id="app" class="app">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <div class="brand-logo">🧾</div>
+        <div>
+          <h1>InvoiceCraft</h1>
+          <p>Privacy-first invoicing</p>
+        </div>
+      </div>
+      <nav class="nav" role="tablist" aria-orientation="vertical">
+        <button class="nav-btn active" data-target="dashboard" role="tab">Dashboard</button>
+        <button class="nav-btn" data-target="editor" role="tab">Invoice Editor</button>
+        <button class="nav-btn" data-target="clients" role="tab">Clients</button>
+        <button class="nav-btn" data-target="products" role="tab">Products & Services</button>
+        <button class="nav-btn" data-target="history" role="tab">Invoice History</button>
+        <button class="nav-btn" data-target="settings" role="tab">Settings</button>
+        <button class="nav-btn" data-target="privacy" role="tab">Privacy</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="export-json" class="primary-btn">Export JSON</button>
+        <button id="import-json" class="secondary-btn">Import JSON</button>
+        <button id="export-encrypted" class="secondary-btn">Encrypted Export</button>
+        <button id="share-url" class="secondary-btn">Shareable Link</button>
+      </div>
+    </aside>
+    <main class="main">
+      <section id="dashboard" class="panel active" role="tabpanel">
+        <header class="panel-header">
+          <h2>Business Health</h2>
+          <div class="header-actions">
+            <button id="refresh-dashboard" class="secondary-btn">Refresh</button>
+          </div>
+        </header>
+        <div class="dashboard-grid">
+          <article class="stat-card">
+            <h3>Total Paid</h3>
+            <p class="stat-value" id="stat-total-paid">0</p>
+          </article>
+          <article class="stat-card">
+            <h3>Outstanding</h3>
+            <p class="stat-value" id="stat-outstanding">0</p>
+          </article>
+          <article class="stat-card">
+            <h3>Overdue</h3>
+            <p class="stat-value" id="stat-overdue">0</p>
+          </article>
+          <article class="stat-card">
+            <h3>Drafts</h3>
+            <p class="stat-value" id="stat-drafts">0</p>
+          </article>
+        </div>
+        <div class="chart-card">
+          <header>
+            <h3>Revenue Last 6 Months</h3>
+            <div class="legend" id="chart-legend"></div>
+          </header>
+          <canvas id="revenue-chart" aria-label="Revenue trend chart" role="img"></canvas>
+        </div>
+        <section class="recent-invoices">
+          <div class="section-header">
+            <h3>Recent Invoices</h3>
+            <button class="secondary-btn" data-target="history">Go to History</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Client</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Due</th>
+              </tr>
+            </thead>
+            <tbody id="recent-invoices"></tbody>
+          </table>
+        </section>
+      </section>
+
+      <section id="editor" class="panel" role="tabpanel">
+        <header class="panel-header">
+          <h2>Invoice Editor</h2>
+          <div class="header-actions">
+            <button id="new-invoice" class="secondary-btn">New Invoice</button>
+            <button id="save-invoice" class="primary-btn">Save Invoice</button>
+            <button id="download-pdf" class="primary-btn">Download PDF</button>
+            <button id="print-invoice" class="secondary-btn">Print</button>
+            <button id="export-csv" class="secondary-btn">Export CSV</button>
+            <button id="export-invoice-json" class="secondary-btn">Export JSON</button>
+          </div>
+        </header>
+        <div class="editor-layout">
+          <form id="invoice-form" autocomplete="off">
+            <section class="form-section">
+              <h3>Sender</h3>
+              <label>Company Name
+                <input type="text" id="sender-name" />
+              </label>
+              <label>Address
+                <textarea id="sender-address"></textarea>
+              </label>
+              <div class="field-grid">
+                <label>Phone
+                  <input type="tel" id="sender-phone" />
+                </label>
+                <label>Email
+                  <input type="email" id="sender-email" />
+                </label>
+              </div>
+              <label>Logo Upload
+                <input type="file" id="logo-upload" accept="image/*" />
+              </label>
+            </section>
+
+            <section class="form-section">
+              <h3>Client</h3>
+              <label>Client
+                <select id="client-select"></select>
+              </label>
+              <label>Client Name
+                <input type="text" id="client-name" />
+              </label>
+              <label>Address
+                <textarea id="client-address"></textarea>
+              </label>
+              <div class="field-grid">
+                <label>Phone
+                  <input type="tel" id="client-phone" />
+                </label>
+                <label>Email
+                  <input type="email" id="client-email" />
+                </label>
+              </div>
+            </section>
+
+            <section class="form-section">
+              <h3>Invoice Details</h3>
+              <div class="field-grid">
+                <label>Invoice #
+                  <input type="text" id="invoice-number" />
+                </label>
+                <button type="button" id="generate-number" class="secondary-btn inline">Generate</button>
+              </div>
+              <div class="field-grid">
+                <label>Issue Date
+                  <input type="date" id="issue-date" />
+                </label>
+                <label>Due Date
+                  <input type="date" id="due-date" />
+                </label>
+                <label>Status
+                  <select id="invoice-status">
+                    <option value="draft">Draft</option>
+                    <option value="sent">Sent</option>
+                    <option value="paid">Paid</option>
+                    <option value="overdue">Overdue</option>
+                  </select>
+                </label>
+              </div>
+              <label>Notes
+                <textarea id="invoice-notes" placeholder="Payment terms, thank you note, etc."></textarea>
+              </label>
+            </section>
+
+            <section class="form-section">
+              <h3>Line Items</h3>
+              <div class="line-item-controls">
+                <button type="button" id="add-line-item" class="primary-btn">Add Line Item</button>
+                <select id="product-preset"></select>
+                <button type="button" id="add-from-product" class="secondary-btn">Add Product</button>
+              </div>
+              <table class="line-items-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>Rate</th>
+                    <th>Total</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="line-items"></tbody>
+              </table>
+              <div class="totals">
+                <div>
+                  <label>Discount Type
+                    <select id="discount-type">
+                      <option value="flat">Flat</option>
+                      <option value="percent">Percent</option>
+                    </select>
+                  </label>
+                  <label>Discount Value
+                    <input type="number" id="discount-value" min="0" step="0.01" />
+                  </label>
+                </div>
+                <div>
+                  <label>Tax %
+                    <input type="number" id="tax-rate" min="0" step="0.01" />
+                  </label>
+                </div>
+                <div class="totals-summary">
+                  <p>Subtotal: <span id="subtotal-display">0</span></p>
+                  <p>Discount: <span id="discount-display">0</span></p>
+                  <p>Tax: <span id="tax-display">0</span></p>
+                  <h4>Total: <span id="total-display">0</span></h4>
+                </div>
+              </div>
+            </section>
+          </form>
+        </div>
+      </section>
+
+      <section id="clients" class="panel" role="tabpanel">
+        <header class="panel-header">
+          <h2>Client Management</h2>
+          <button id="add-client" class="primary-btn">Add Client</button>
+        </header>
+        <div class="section-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Invoices</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="client-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="products" class="panel" role="tabpanel">
+        <header class="panel-header">
+          <h2>Products & Services</h2>
+          <button id="add-product" class="primary-btn">Add Item</button>
+        </header>
+        <div class="section-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Rate</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="product-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="history" class="panel" role="tabpanel">
+        <header class="panel-header">
+          <h2>Invoice History</h2>
+          <div class="header-actions">
+            <label for="history-filter">Filter</label>
+            <select id="history-filter">
+              <option value="all">All</option>
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+            <input type="search" id="history-search" placeholder="Search invoices" />
+          </div>
+        </header>
+        <div class="section-body">
+          <table>
+            <thead>
+              <tr>
+                <th data-sort="number">Invoice #</th>
+                <th data-sort="client">Client</th>
+                <th data-sort="total">Total</th>
+                <th data-sort="status">Status</th>
+                <th data-sort="due">Due Date</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="history-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="settings" class="panel" role="tabpanel">
+        <header class="panel-header">
+          <h2>Customization & Settings</h2>
+        </header>
+        <div class="settings-grid">
+          <div class="settings-card">
+            <h3>Accent Color</h3>
+            <input type="color" id="accent-color" />
+          </div>
+          <div class="settings-card">
+            <h3>Font</h3>
+            <select id="font-choice">
+              <option value="'Inter', sans-serif">Inter</option>
+              <option value="'Libre Baskerville', serif">Libre Baskerville</option>
+              <option value="'Georgia', serif">Georgia</option>
+              <option value="'Helvetica Neue', sans-serif">Helvetica Neue</option>
+              <option value="'Courier New', monospace">Courier New</option>
+            </select>
+          </div>
+          <div class="settings-card">
+            <h3>Currency</h3>
+            <select id="currency-choice">
+              <option value='{"symbol":"$","code":"USD","locale":"en-US"}'>USD</option>
+              <option value='{"symbol":"€","code":"EUR","locale":"de-DE"}'>EUR</option>
+              <option value='{"symbol":"£","code":"GBP","locale":"en-GB"}'>GBP</option>
+              <option value='{"symbol":"¥","code":"JPY","locale":"ja-JP"}'>JPY</option>
+              <option value='{"symbol":"₹","code":"INR","locale":"en-IN"}'>INR</option>
+            </select>
+          </div>
+          <div class="settings-card">
+            <h3>Template Theme</h3>
+            <div class="theme-buttons">
+              <button data-theme="classic" class="theme-btn primary-btn">Classic</button>
+              <button data-theme="modern" class="theme-btn secondary-btn">Modern</button>
+              <button data-theme="minimal" class="theme-btn secondary-btn">Minimal</button>
+              <button data-theme="bold" class="theme-btn secondary-btn">Bold</button>
+            </div>
+          </div>
+          <div class="settings-card">
+            <h3>Auto Save</h3>
+            <label>
+              <input type="checkbox" id="auto-save" /> Enable auto-save
+            </label>
+          </div>
+          <div class="settings-card">
+            <h3>Footer Text</h3>
+            <textarea id="footer-text" rows="4"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section id="privacy" class="panel" role="tabpanel">
+        <header class="panel-header">
+          <h2>Privacy & Security</h2>
+        </header>
+        <article class="privacy-content">
+          <h3>Privacy-First, Client-Side Only</h3>
+          <p>
+            InvoiceCraft never sends your data to a server. All information—clients, invoices, company details—lives securely in your browser using localStorage.
+            You stay completely anonymous.
+          </p>
+          <h3>Data Portability & Control</h3>
+          <p>
+            Download your data as JSON, encrypted archives, or share via self-contained URLs. You have full control, without ever creating an account or sharing your information online.
+          </p>
+          <h3>Recommended Practices</h3>
+          <ul>
+            <li>Back up regularly using encrypted exports.</li>
+            <li>Use strong passwords for encrypted backups.</li>
+            <li>Keep your browser updated to ensure secure crypto operations.</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+
+    <aside class="preview" aria-label="Live invoice preview">
+      <header class="preview-header">
+        <h2>Live Preview</h2>
+        <button id="preview-toggle" class="secondary-btn">Hide Preview</button>
+      </header>
+      <div class="preview-container">
+        <div id="invoice-preview" class="invoice theme-classic" role="document" aria-live="assertive"></div>
+      </div>
+      <footer class="preview-footer">
+        <p>Last saved: <span id="last-saved">Never</span></p>
+      </footer>
+    </aside>
+  </div>
+
+  <div class="toast" role="status" aria-live="polite" id="toast"></div>
+
+  <dialog id="modal" aria-modal="true"></dialog>
+
+  <input type="file" id="import-file" accept="application/json" hidden />
+
+  <script src="script.js" defer></script>
+</body>
+</html>
